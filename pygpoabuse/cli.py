@@ -54,6 +54,15 @@ def main():
     parser.add_argument('-ccache', action='store', help='ccache file name (must be in local directory)')
     parser.add_argument('-f', action='store_true', help='Force add ScheduleTask')
     parser.add_argument('-v', action='count', default=0, help='Verbosity level (-v or -vv)')
+    filtered = parser.add_argument_group("Host/User targeting via filters (mirrors SharpGPOAbuse --FilterEnabled)")
+    filtered.add_argument('-filter-enabled', action='store_true',
+                           help='Enable GPO Host/User targeting so the scheduled task only runs for a specific host/user')
+    filtered.add_argument('-target-dns-name', action='store', default='', metavar='FQDN',
+                           help='Computer task: DNS/FQDN of the only host that should run the task (e.g. dc01.corp.local)')
+    filtered.add_argument('-target-username', action='store', default='', metavar='DOMAIN\\USER',
+                           help='User task: only this user processes the task (format: DOMAIN\\username)')
+    filtered.add_argument('-target-user-sid', action='store', default='', metavar='SID',
+                           help='User task: SID of the targeted user (optional, more robust matching)')
 
     linux = parser.add_argument_group("Linux (Samba AD) options")
     linux.add_argument("--linux-exec", metavar="/PATH/TO/EXEC",
@@ -76,6 +85,18 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(25)  # SUCCESS level: show successes, warnings and errors
+    _is_user_task = options.user or options.user_as_admin
+    if options.filter_enabled:
+        if _is_user_task:
+            if not (options.target_username or options.target_user_sid):
+                logging.error("-filter-enabled on a user task requires -target-username and/or -target-user-sid")
+                sys.exit(1)
+        else:
+            if not options.target_dns_name:
+                logging.error("-filter-enabled on a computer task requires -target-dns-name")
+                sys.exit(1)
+    elif options.target_dns_name or options.target_username or options.target_user_sid:
+        logging.warning("Targeting option supplied without -filter-enabled; item-level targeting will NOT be applied")
 
     domain, username, password = parse_credentials(options.target)
 
@@ -182,7 +203,11 @@ def main():
             powershell=options.powershell,
             command=options.command,
             gpo_type=gpo_type,
-            force=options.f
+            force=options.f,
+            filter_enabled=options.filter_enabled,
+            target_dns_name=options.target_dns_name,
+            target_username=options.target_username,
+            target_user_sid=options.target_user_sid
         )
         if task_name:
             if gpo.update_versions(url, domain, options.gpo_id, gpo_type=gpo_type):
