@@ -1,5 +1,19 @@
 # pyGPOAbuse
 
+## pyGPOAbuseFiltered Additions
+- Now supports filtered targeting of users or hosts similar to SharpGPOAbuse
+- Scenario: GPO is linked to the Active-Directory Domain therefore tasks would be applied to all affected objects within said domain (users/hosts) which would leave a ton of unnecesary noise and artifacts. Therefore a more targeted approach is preferred executing commands on specifc targets e.g. the domain controller.
+```bash
+Host/User targeting via filters (mirrors SharpGPOAbuse --FilterEnabled):
+  -filter-enabled       Enable GPO Host/User targeting so the scheduled task only runs for a specific host/user
+  -target-dns-name FQDN
+                        Computer task: DNS/FQDN of the only host that should run the task (e.g. dc01.corp.local)
+  -target-username DOMAIN\USER
+                        User task: only this user processes the task (format: DOMAIN\username)
+  -target-user-sid SID  User task: SID of the targeted user (optional, more robust matching)
+
+```
+
 ## Description
 
 Python **partial** implementation of [SharpGPOAbuse](https://github.com/FSecureLABS/SharpGPOAbuse) by[@pkb1s](https://twitter.com/pkb1s)
